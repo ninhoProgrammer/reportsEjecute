@@ -14,21 +14,22 @@ using System.Windows.Forms;
 using Microsoft.Reporting.WinForms;
 
 
-namespace repotsEjecute
+namespace ReportsEjecute
 {
     public class CreateReportsToPDF
     {
-        ReportViewer reportViewer1;
-        private System.Data.SqlClient.SqlConnection conexion;
-        private DataSet ds;
+        private ReportViewer ReportViewerCreations { get; set; }
+        private System.Data.SqlClient.SqlConnection _Conexion { get; set; }
+        private DataSet _DatasetCreations { get; set; }
+        private static string _Company { get; set; }
 
         static void Main(string[] args)
         {
             CreateReportsToPDF createReportsToPDF = new CreateReportsToPDF();
             // Validar parámetros
-            if (args.Length < 8)
+            if (args.Length < 10)
             {
-                Console.WriteLine("Error: Se necesitan 8 parámetros.");
+                Console.WriteLine("Entraste a modo compilado");
                 string[] parameters =
                 {
                     "Z:\\RDLReportes\\RC_-_Balanza_catorcena.rdl",
@@ -38,7 +39,9 @@ namespace repotsEjecute
                     "2024",
                     "1",
                     "0",
-                    "true"
+                    "true",
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp", "ScreenshotsReporte.pdf"),
+                    "BARRON"
                 };
                 args = parameters;
             }
@@ -50,12 +53,14 @@ namespace repotsEjecute
             string peTipo = args[3];
             string peAnio = args[4];
             string peNumero = args[5];
-            string otroParametro = args[6];
-            bool Activo = true;
+            string cbCodigo = args[6];
+            bool Activo = bool.Parse(args[7]);
+            string outputFilePath = args[8];
+            _Company = args[9];
 
-
+            
             // Llamar a la función existente
-            string result = createReportsToPDF.creationsReports(path, ReCodigo, ReNombre, peTipo, peAnio, peNumero, otroParametro, Activo, null);
+            string result = createReportsToPDF.CreationsReports(path, ReCodigo, ReNombre, peTipo, peAnio, peNumero, cbCodigo, Activo, null, outputFilePath);
 
             // Guardar el resultado en un archivo .txt
             //createReportsToPDF.returnMessage(result);
@@ -67,34 +72,25 @@ namespace repotsEjecute
         }
 
         public CreateReportsToPDF()
-        { 
+        {
         }
 
-        public string creationsReports(string path, string ReCodigo, string ReNombre, string peTipo, string peAnio, string peNumero, string colabora, bool Activo, DataTable dataTable)
+        public string CreationsReports(string path, string ReCodigo, string ReNombre, string peTipo, string peAnio, string peNumero, string colabora, bool Activo, DataTable dataTable, string outputFilePath)
         {
             try
             {
-                reportViewer1 = new ReportViewer();
+                ReportViewerCreations = new ReportViewer();
                 string activo = "Si";
-                reportViewer1.LocalReport.ReportPath = path;
+                ReportViewerCreations.LocalReport.ReportPath = path;
 
                 if (File.Exists(path))
                 {
                     // El reporte está listo para abrirse
-                    if (Activo)
-                    {
-                        activo = "S";
-                    }
-                    else
-                    {
-                        activo = "N";
-                    }
-                    //vDatosPeriodo:
-                    //[0]Año, [1]Tipo(Numero), [2]Numero, [3]Empleado, [4]Tipo(Texto), [5]Fecha Inicio, [6]Fecha Fin, [7]Nombre Empleado
+                    activo = Activo ? "S" : "N";
 
                     List<ReportParameter> parametros = new List<ReportParameter>
                     {
-                        new ReportParameter("EMPRESA", "BARRON"),
+                        new ReportParameter("EMPRESA", _Company),
                         new ReportParameter("REPORTE", ReNombre),
                         new ReportParameter("ACTIVO", activo),
                         new ReportParameter("AÑO", peAnio),
@@ -103,7 +99,7 @@ namespace repotsEjecute
                         new ReportParameter("EMPLEADO", colabora)
                     };
 
-                    var validParameters = reportViewer1.LocalReport.GetParameters();
+                    var validParameters = ReportViewerCreations.LocalReport.GetParameters();
 
                     // Filtrar y establecer solo los parámetros que están definidos en el informe
                     var parametersToSet = parametros
@@ -112,22 +108,23 @@ namespace repotsEjecute
 
                     if (parametersToSet.Any())
                     {
-                        reportViewer1.LocalReport.SetParameters(parametersToSet);
+                        ReportViewerCreations.LocalReport.SetParameters(parametersToSet);
                     }
 
 
                     //formReports.reportViewer1.Clear();
-                    var parameters = reportViewer1.LocalReport.GetParameters();
-                    var dataSourceNames = reportViewer1.LocalReport.GetDataSourceNames();
+                    var parameters = ReportViewerCreations.LocalReport.GetParameters();
+                    var dataSourceNames = ReportViewerCreations.LocalReport.GetDataSourceNames();
 
-                    ReportDataSource reportDataSource = new ReportDataSource(dataSourceNames[0].ToString(), DataReporte(GetSqlQueryFromRdl(path), reportViewer1));
+                    ReportDataSource reportDataSource = new ReportDataSource(dataSourceNames[0].ToString(), DataReporte(GetSqlQueryFromRdl(path), ReportViewerCreations));
                     //ReportDataSource reportDataSource2 = new ReportDataSource("DataSet1", repRLDC.Tables["KARDEX"]);
                     if (reportDataSource.Value != null)
                     {
-                        reportViewer1.LocalReport.DataSources.Clear();
-                        reportViewer1.LocalReport.DataSources.Add(reportDataSource);
+                        ReportViewerCreations.LocalReport.DataSources.Clear();
+                        ReportViewerCreations.LocalReport.DataSources.Add(reportDataSource);
 
-                        string outputFilePath = "C:\\Users\\mario\\Documents\\GitHub\\Reporteadores\\wwwroot\\Temp\\ScreenshotsReporte.pdf";
+                        // Reemplazar la línea problemática con la línea corregida
+                        //string outputFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp", "ScreenshotsReporte.pdf");
 
                         // Configura los parámetros para exportar
                         Warning[] warnings;
@@ -137,7 +134,7 @@ namespace repotsEjecute
                         string extension = string.Empty;
 
                         // Renderiza el reporte en formato PDF
-                        byte[] bytes = reportViewer1.LocalReport.Render(
+                        byte[] bytes = ReportViewerCreations.LocalReport.Render(
                             "PDF", // Formato de exportación
                             null, // DeviceInfo (puede ser null para usar configuración por defecto)
                             out mimeType,
@@ -146,7 +143,7 @@ namespace repotsEjecute
                             out streamIds,
                             out warnings
                         );
-
+                        //MessageBox.Show(outputFilePath);
                         // Guarda el PDF en el sistema de archivos
                         using (FileStream fs = new FileStream(outputFilePath, FileMode.Create))
                         {
@@ -154,25 +151,35 @@ namespace repotsEjecute
                         }
 
                         // Mensaje de confirmación
+                        //returnMessage(outputFilePath);
                         return outputFilePath;
                     }
                 }
                 else
                 {
-                    returnMessage("Message: sdas");
+                    returnMessage("Message: sdas", outputFilePath);
+
                 }
             }
             catch (Exception ex)
             {
-                returnMessage(ex.Message);
+                returnMessage(ex.Message, outputFilePath);
                 return " ";
             }
             return " ";
         }
 
-        public void returnMessage(string message)
+        public void returnMessage(string message, string outputFilePath)
         {
-            string outputPath = "C:\\wwwroot\\Temp\\resultado.txt";
+            string outputDirectory = Path.GetDirectoryName(outputFilePath);
+            string outputPath = Path.Combine(outputDirectory, "resultado.txt");
+            string directoryPath = Path.GetDirectoryName(outputPath);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
             Console.WriteLine(outputPath);
             File.WriteAllText(outputPath, message);
         }
@@ -213,28 +220,28 @@ namespace repotsEjecute
         {
             try
             {
-                conexion = ObtenerConexion();
-                if (conexion.State != System.Data.ConnectionState.Open)
+                _Conexion = ObtenerConexion();
+                if (_Conexion.State != System.Data.ConnectionState.Open)
                 {
-                    conexion.Open();
+                    _Conexion.Open();
                 }
                 QUERY = QUERY.Replace("&gt;", ">").Replace("&lt;", "<");
-                SqlCommand cmd = new SqlCommand(QUERY, conexion);
+                SqlCommand cmd = new SqlCommand(QUERY, _Conexion);
                 var parameters = parametros.LocalReport.GetParameters();
                 foreach (var param in parameters)
                 {
                     cmd.Parameters.AddWithValue("@" + param.Prompt, param.Values[0].ToString());
                 }
                 SqlDataAdapter ad = new SqlDataAdapter(cmd);
-                ds = new DataSet();
-                ad.Fill(ds, "tabla");
-                conexion.Close();
+                _DatasetCreations = new DataSet();
+                ad.Fill(_DatasetCreations, "tabla");
+                _Conexion.Close();
                 //return ds;
-                return ds.Tables["tabla"];
+                return _DatasetCreations.Tables["tabla"];
             }
             catch (Exception es)
             {
-                conexion.Close();
+                _Conexion.Close();
                 MessageBox.Show("Elementos no validos: " + es.Message);
 
                 return null;
@@ -244,7 +251,7 @@ namespace repotsEjecute
 
         public static System.Data.SqlClient.SqlConnection ObtenerConexion()
         {
-            System.Data.SqlClient.SqlConnection Conexion = new System.Data.SqlClient.SqlConnection(@"Data Source=192.168.101.100; Initial Catalog= BARRON; MultipleActiveResultSets = true;User ID=sa; Password=Admin_sqlABG");
+            System.Data.SqlClient.SqlConnection Conexion = new System.Data.SqlClient.SqlConnection(@"Data Source=192.168.101.100; Initial Catalog=" + _Company + " ; MultipleActiveResultSets = true;User ID=sa; Password=Admin_sqlABG");
             return Conexion;
         }
     }
