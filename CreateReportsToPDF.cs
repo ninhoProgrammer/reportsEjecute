@@ -27,7 +27,7 @@ namespace ReportsEjecute
         {
             CreateReportsToPDF createReportsToPDF = new CreateReportsToPDF();
             // Validar parámetros
-            if (args.Length < 10)
+            if (args.Length < 11)
             {
                 Console.WriteLine("Entraste a modo compilado");
                 string[] parameters =
@@ -41,12 +41,12 @@ namespace ReportsEjecute
                     "0",
                     "true",
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp", "ScreenshotsReporte.pdf"),
+                    "pdf",
                     "BARRON"
                 };
                 args = parameters;
             }
-
-
+            
             string path = args[0];
             string ReCodigo = args[1];
             string ReNombre = args[2];
@@ -56,11 +56,11 @@ namespace ReportsEjecute
             string cbCodigo = args[6];
             bool Activo = bool.Parse(args[7]);
             string outputFilePath = args[8];
-            _Company = args[9];
+            string format = args[9];
+            _Company = args[10];
 
-            
             // Llamar a la función existente
-            string result = createReportsToPDF.CreationsReports(path, ReCodigo, ReNombre, peTipo, peAnio, peNumero, cbCodigo, Activo, null, outputFilePath);
+            string result = createReportsToPDF.CreationsReports(path, ReCodigo, ReNombre, peTipo, peAnio, peNumero, cbCodigo, Activo, null, outputFilePath, format);
 
             // Guardar el resultado en un archivo .txt
             //createReportsToPDF.returnMessage(result);
@@ -75,14 +75,13 @@ namespace ReportsEjecute
         {
         }
 
-        public string CreationsReports(string path, string ReCodigo, string ReNombre, string peTipo, string peAnio, string peNumero, string colabora, bool Activo, DataTable dataTable, string outputFilePath)
+        public string CreationsReports(string path, string ReCodigo, string ReNombre, string peTipo, string peAnio, string peNumero, string colabora, bool Activo, DataTable dataTable, string outputFilePath, string format)
         {
             try
             {
                 ReportViewerCreations = new ReportViewer();
                 string activo = "Si";
                 ReportViewerCreations.LocalReport.ReportPath = path;
-
                 if (File.Exists(path))
                 {
                     // El reporte está listo para abrirse
@@ -111,58 +110,64 @@ namespace ReportsEjecute
                         ReportViewerCreations.LocalReport.SetParameters(parametersToSet);
                     }
 
-
-                    //formReports.reportViewer1.Clear();
                     var parameters = ReportViewerCreations.LocalReport.GetParameters();
                     var dataSourceNames = ReportViewerCreations.LocalReport.GetDataSourceNames();
 
                     ReportDataSource reportDataSource = new ReportDataSource(dataSourceNames[0].ToString(), DataReporte(GetSqlQueryFromRdl(path), ReportViewerCreations));
-                    //ReportDataSource reportDataSource2 = new ReportDataSource("DataSet1", repRLDC.Tables["KARDEX"]);
                     if (reportDataSource.Value != null)
                     {
                         ReportViewerCreations.LocalReport.DataSources.Clear();
                         ReportViewerCreations.LocalReport.DataSources.Add(reportDataSource);
 
-                        // Reemplazar la línea problemática con la línea corregida
-                        //string outputFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp", "ScreenshotsReporte.pdf");
-
-                        // Configura los parámetros para exportar
                         Warning[] warnings;
                         string[] streamIds;
                         string mimeType = string.Empty;
                         string encoding = string.Empty;
                         string extension = string.Empty;
+                        byte[] bytes;
+                        // Renderiza el reporte en el formato especificado
+                        if (format == "pdf")
+                        {
+                            bytes = ReportViewerCreations.LocalReport.Render(
+                               "PDF", // Formato de exportación
+                               null, // DeviceInfo (puede ser null para usar configuración por defecto)
+                               out mimeType,
+                               out encoding,
+                               out extension,
+                               out streamIds,
+                               out warnings
+                            );
+                        }
+                        else
+                        {
+                            bytes = ReportViewerCreations.LocalReport.Render(
+                               "Excel", // Formato de exportación
+                               null, // DeviceInfo (puede ser null para usar configuración por defecto)
+                               out mimeType,
+                               out encoding,
+                               out extension,
+                               out streamIds,
+                               out warnings
+                            );
+                        }
 
-                        // Renderiza el reporte en formato PDF
-                        byte[] bytes = ReportViewerCreations.LocalReport.Render(
-                            "PDF", // Formato de exportación
-                            null, // DeviceInfo (puede ser null para usar configuración por defecto)
-                            out mimeType,
-                            out encoding,
-                            out extension,
-                            out streamIds,
-                            out warnings
-                        );
-                        //MessageBox.Show(outputFilePath);
-                        // Guarda el PDF en el sistema de archivos
+                        // Guarda el archivo en el sistema de archivos
                         using (FileStream fs = new FileStream(outputFilePath, FileMode.Create))
                         {
                             fs.Write(bytes, 0, bytes.Length);
                         }
 
-                        // Mensaje de confirmación
-                        //returnMessage(outputFilePath);
                         return outputFilePath;
                     }
                 }
                 else
                 {
-                    returnMessage("Message: sdas", outputFilePath);
-
+                    returnMessage("El archivo de reporte no existe.", outputFilePath);
                 }
             }
             catch (Exception ex)
             {
+                MessageBox.Show(ex.Message, outputFilePath);
                 returnMessage(ex.Message, outputFilePath);
                 return " ";
             }
