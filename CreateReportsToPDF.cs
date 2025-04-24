@@ -247,7 +247,7 @@ namespace ReportsEjecute
             catch (Exception es)
             {
                 _Conexion.Close();
-                MessageBox.Show("Elementos no validos: " + es.Message);
+                MessageBox.Show("Elementos no validos: " + es.Message + QUERY);
 
                 return null;
             }
