@@ -34,4 +34,5 @@ Genera el reporte y súbelo a la nube si es necesario.
 ¡Las contribuciones son bienvenidas! Abre un issue o envía un pull request.
 
 ## Licencia
-Este proyecto está bajo la Licencia MIT. Consulta el archivo LICENSE para más información.
+
+This license is under the ![[MIT License] (LICENSE)].
